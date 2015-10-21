@@ -1,28 +1,42 @@
 @ECHO OFF
 SET SHARED=shared32
 SET PATH=%~dp0\%SHARED%;%PATH%
+SET FPS=2
 
 IF "%1"=="" (
 	ECHO *** MISSING VIDEO FILE
 	EXIT 1
 ) 
 
-IF "%2"=="" (
-	ECHO *** MISSING TARGET DIRECTORY
-	EXIT 2
+SET OUT=output\%~n1
+IF /I "%2"=="/k" (
+	SET FPS=key
+) ELSE (
+	IF NOT "%2"=="" SET OUT="%2"
+	IF /I "%3"=="/k" SET FPS=key
 )
  
-IF NOT EXIST %2 MKDIR %2
+IF NOT EXIST "%OUT%" MKDIR "%OUT%"
+IF NOT EXIST "%OUT%\video" MKDIR "%OUT%\video"
+IF NOT EXIST "%OUT%\video_web" MKDIR "%OUT%\video_web"
+IF NOT EXIST "%OUT%\photos" MKDIR "%OUT%\photos"
+IF NOT EXIST "%OUT%\large" MKDIR "%OUT%\large"
+IF NOT EXIST "%OUT%\thumb" MKDIR "%OUT%\thumb"
 
-ffmpeg -i %1 -filter:v fps="1/2" -vsync 0 -qscale:v 0 %2\%%05d.png
+IF /I "%FPS%"=="key" (
+	ffmpeg -i %1 -filter:v select="eq(pict_type\,I)" -vsync 0 "%OUT%\photos\%%05d.png"
+) ELSE (
+	ffmpeg -i %1 -filter:v fps="%FPS%" -vsync 0 -qscale:v 0 "%OUT%\photos\%%05d.png"
+)
 
 SET TMP_MPC=%TMP%\frame.mpc
  
-FOR %%F IN (%2\?????.png) DO (
+FOR %%F IN ("%OUT%\photos\?????.png") DO (
 	ECHO * RESCALING %%F
     convert -quiet -regard-warnings %%F +repage %TMP_MPC%
-	convert -scale 50%% %TMP_MPC% %%~dpFm_%%~nF.png
-	convert -scale 5%% %TMP_MPC% %%~dpFt_%%~nF.png
+	convert -resize 640 %TMP_MPC% "%OUT%\large\%%~nF.png"
+	convert -resize 250 %TMP_MPC% "%OUT%\thumb\%%~nF.png"
 )
 
-COPY %1 %2
+COPY %1 "%OUT%\video"
+IF NOT "%~p1"=="%~p0test\" DEL /F /Q "%1"
