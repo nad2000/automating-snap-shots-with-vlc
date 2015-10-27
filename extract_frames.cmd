@@ -1,6 +1,6 @@
 @ECHO OFF
-SET SHARED=shared32
-SET PATH=%~dp0\%SHARED%;%PATH%
+SET SHARED=%~dp0\shared32
+SET PATH=%SHARED%;%PATH%
 REM FPS - Frames Per Sec
 REM e.g. FPS=1/2 == 1 frame each 2 sec
 REM e.g. FPS=1/4 == 1 frame each 4 sec
@@ -11,7 +11,8 @@ IF "%1"=="" (
 	EXIT 1
 ) 
 
-SET OUT=output\%~n1
+SET NAME=%~n1
+SET OUT=output\%NAME%
 IF /I "%~2"=="/k" (
 	SET FPS=key
 ) ELSE (
@@ -27,18 +28,19 @@ IF NOT EXIST "%OUT%\large" MKDIR "%OUT%\large"
 IF NOT EXIST "%OUT%\thumb" MKDIR "%OUT%\thumb"
 
 IF /I "%FPS%"=="key" (
-	ffmpeg -i %1 -filter:v select="eq(pict_type\,I)" -vsync 0 "%OUT%\photos\%%05d.png"
+	%SHARED%\ffmpeg -i %1 -filter:v select="eq(pict_type\,I)" -vsync 0 "%OUT%\photos\%%05d.png"
 ) ELSE (
-	ffmpeg -i %1 -filter:v fps="%FPS%" -vsync 0 -qscale:v 0 "%OUT%\photos\%%05d.png"
+	%SHARED%\ffmpeg -i %1 -filter:v fps="%FPS%" -vsync 0 -qscale:v 0 "%OUT%\photos\%%05d.png"
 )
 
 SET TMP_MPC=%TMP%\frame.mpc
  
 FOR %%F IN ("%OUT%\photos\?????.png") DO (
 	ECHO * RESCALING %%F
-    convert -quiet -regard-warnings "%%F" +repage %TMP_MPC%
-	convert -resize 640 %TMP_MPC% "%OUT%\large\%%~nF.png"
-	convert -resize 250 %TMP_MPC% "%OUT%\thumb\%%~nF.png"
+    %SHARED%\convert -quiet -regard-warnings "%%F" +repage %TMP_MPC%
+	%SHARED%\convert -resize 640 %TMP_MPC% "%OUT%\large\%NAME%_Large_%%~nF.png"
+	%SHARED%\convert -resize 250 %TMP_MPC% "%OUT%\thumb\%NAME%_Thumb_%%~nF.png"
+	RENAME "%%F" "%NAME%_Photo_%%~nF.png"
 )
 
 COPY %1 "%OUT%\video"
